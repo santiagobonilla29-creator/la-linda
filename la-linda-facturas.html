@@ -89,10 +89,11 @@
 
 <header>
   <div class="logo-mark">L</div>
-  <div>
+  <div style="flex:1;">
     <div class="logo-text">La Linda</div>
     <div class="logo-sub">Registro de compras</div>
   </div>
+  <button onclick="showConfig()" style="background:transparent;border:1.5px solid #C4B9AC;color:#C4B9AC;border-radius:8px;padding:6px 12px;font-size:12px;font-family:Arial,sans-serif;cursor:pointer;">⚙️ API Key</button>
 </header>
 
 <main>
@@ -240,6 +241,14 @@
       showPanel('upload');
     }
   });
+
+  function showConfig() {
+    panels.forEach(p => document.getElementById('panel-' + p).classList.add('hidden'));
+    document.getElementById('panel-config').classList.remove('hidden');
+    // Pre-fill if exists
+    const existing = getAnthropicKey();
+    if (existing) document.getElementById('config-key').value = existing;
+  }
 
   function saveConfig() {
     const key = document.getElementById('config-key').value.trim();
