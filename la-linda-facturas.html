@@ -196,6 +196,8 @@
         <div class="totals-row"><span class="tlabel">Exento</span><span id="t-exento">—</span></div>
         <div class="totals-row grand"><span class="tlabel">Total</span><span id="t-total">—</span></div>
       </div>
+      <div id="iva-check-warning" class="alert alert-error hidden" style="margin-top:12px;"></div>
+      <div id="iva-check-ok" class="alert" style="margin-top:12px; background:#EAF2EC; border:1.5px solid #B4D4BB; color:#3D6B4F; display:none;"></div>
     </div>
     <div class="btn-row">
       <button class="btn btn-outline" onclick="resetToUpload()">Nueva foto</button>
@@ -476,7 +478,16 @@ Descuentos y ofertas: asignales la tasa del producto al que corresponden.`;
   }
 
   function updateItem(idx, field, val) {
-    if (extractedData && extractedData.items[idx]) extractedData.items[idx][field] = val;
+    if (extractedData && extractedData.items[idx]) {
+      extractedData.items[idx][field] = val;
+      // Recalculate subtotal if quantity or price changed
+      if (field === 'cantidad' || field === 'precio_unitario') {
+        const item = extractedData.items[idx];
+        item.subtotal = parseFloat(item.cantidad || 0) * parseFloat(item.precio_unitario || 0);
+      }
+      recalcIVAFromItems(extractedData);
+      populateForm(extractedData);
+    }
   }
 
   function recalcIVAFromItems(d) {
@@ -503,6 +514,28 @@ Descuentos y ofertas: asignales la tasa del producto al que corresponden.`;
     document.getElementById('t-10-base').textContent = d.base_10 ? '$ ' + d.base_10.toFixed(2) : '—';
     document.getElementById('t-10-cuota').textContent = d.cuota_10 ? '$ ' + d.cuota_10.toFixed(2) : '—';
     document.getElementById('t-exento').textContent = d.exento ? '$ ' + d.exento.toFixed(2) : '—';
+
+    // Validate that IVA breakdown matches the invoice total
+    const sumaCalculada = (d.base_22 + d.cuota_22 + d.base_10 + d.cuota_10 + d.exento);
+    const totalFactura = parseFloat(d.total || 0);
+    const diferencia = Math.abs(sumaCalculada - totalFactura);
+    const warningEl = document.getElementById('iva-check-warning');
+    const okEl = document.getElementById('iva-check-ok');
+
+    if (totalFactura > 0) {
+      if (diferencia > 2) {
+        warningEl.textContent = `⚠️ Los ítems suman $${sumaCalculada.toFixed(2)} pero el total de la factura es $${totalFactura.toFixed(2)} (diferencia de $${diferencia.toFixed(2)}). Revisá las cantidades, precios o el IVA% de cada ítem antes de guardar.`;
+        warningEl.classList.remove('hidden');
+        okEl.style.display = 'none';
+      } else {
+        warningEl.classList.add('hidden');
+        okEl.textContent = `✓ Los ítems cierran correctamente con el total de la factura.`;
+        okEl.style.display = 'block';
+      }
+    } else {
+      warningEl.classList.add('hidden');
+      okEl.style.display = 'none';
+    }
   }
 
   function goToSave() {
